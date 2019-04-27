@@ -38,8 +38,8 @@ int main(void)
 		printf("MPU6050 on BottomLayer not found\n\n");
 	}
 	
-	R0 = 1;
-	R1 = 1;
+//	R0 = 1;
+//	R1 = 1;
 	
 	while (1)
 	{
