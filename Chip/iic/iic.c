@@ -8,7 +8,7 @@ void IIC_Init(void)
 
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);//使能GPIOB时钟
 
-	//GPIOB8,B9初始化设置
+	//GPIO初始化设置
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;//普通输出模式
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;//推挽输出
@@ -110,13 +110,13 @@ uint8_t IIC_Read_Byte(unsigned char ack)
 	SDA_IN();//SDA设置为输入
     for(i=0;i<8;i++ )
 	{
-        IIC_SCL=0; 
+        IIC_SCL=0;
         delay_us(2);
 		IIC_SCL=1;
         receive<<=1;
-        if(READ_SDA)receive++;   
+        if(READ_SDA)receive++;
 		delay_us(1); 
-    }					 
+    }
     if (!ack)
         IIC_NAck();//发送nACK
     else
