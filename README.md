@@ -5,6 +5,7 @@
 
 + dbug_log: 05/02/2019 
    modify dmp driver to tow mpu6050. 
+   find that mpu6050 with dmp **can't init at a not horizental flat**
 
 + dbug_log: 05/01/2019 
    find bug @pwm configor, modified and test OK. 

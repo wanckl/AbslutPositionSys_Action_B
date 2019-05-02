@@ -55,6 +55,9 @@ void SysTick_Handler(void);
 }
 #endif
 
+extern void ssi_data_process(void);
+extern uint8_t mpu_temp_pid(uint8_t hope);
+
 #endif /* __STM32F4xx_IT_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

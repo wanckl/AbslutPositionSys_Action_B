@@ -2964,7 +2964,7 @@ uint8_t mpu_dmp_init(void)
 		res=mpu_set_dmp_state(1);	//Ê¹ÄÜDMP
 		if(res)return 9;     
 	}
-	else return -1;
+	else return 10;
 	return 0;
 }
 

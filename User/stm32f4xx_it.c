@@ -228,9 +228,21 @@ void CAN2_RX0_IRQHandler(void)
   */ 
 void TIM2_IRQHandler(void)
 {
+	static uint16_t timer;
+	uint8_t res;
+	
 	if(TIM_GetITStatus(TIM2,TIM_IT_Update)==SET) //溢出中断
 	{
-		LED0 = !LED0;	//DS0翻转
+		timer ++;
+		if(timer >= 1250)	//0.5s timer base
+		{
+			timer = 0;
+			LED0 = ~LED0;
+			res = mpu_temp_pid(50);
+			TIM_SetCompare3(TIM3,res);	//修改比较值
+			TIM_SetCompare4(TIM3,res);
+		}
+		ssi_data_process();
 	}
 	TIM_ClearITPendingBit(TIM2,TIM_IT_Update);  //清除中断标志位
 }

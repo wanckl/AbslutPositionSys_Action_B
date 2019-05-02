@@ -1,4 +1,6 @@
+#include <math.h>
 #include "stm32f4xx.h"
+#include "stm32f4xx_it.h"
 #include "sys.h"
 #include "delay.h"
 #include "usart.h"
@@ -11,24 +13,32 @@
 #include "inv_mpu.h"
 #include "inv_mpu_dmp_motion_driver.h"
 
+struct imu_struct
+{
+	uint8_t addr;
+	float pitch, roll, yaw;			//欧拉角
+	short accx, accy, accz;			//加速度原始数据
+	short gyrox, gyroy, gyroz;		//角速度原始数据
+	float temp;						//温度
+};
+
+
 void RCC_ClockConfig(void);
+void ssi_data_process(void);
+uint8_t mpu_temp_pid(uint8_t hope);
+
+const static uint8_t diameter = 5;	//直径 cm
+const static float Pi = 3.141592653579f;
+
+uint32_t as1_count = 0, as2_count = 0;
+uint32_t position_x = 0, position_y = 0;
+
+struct imu_struct mpu_avr;
 
 int main(void)
 {
-	uint16_t num = 100;
-	uint16_t as1, as2;	//AS5045 12bit abslute angle
-	uint32_t astmp;
-	
-	struct imu_struct
-	{
-		uint8_t addr;
-		float pitch, roll, yaw;			//欧拉角
-		short accx, accy, accz;			//加速度原始数据
-		short gyrox, gyroy, gyroz;		//角速度原始数据
-		float temp;						//温度
-	} mpu_t, mpu_b, mpu_avr;			//mpu_addr on top and bottom
-	
 	RCC_ClocksTypeDef Rcc_clock;
+	struct imu_struct mpu_t, mpu_b;			//mpu_addr on top and bottom
 	
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);	//设置系统中断优先级分组2
 	
@@ -39,7 +49,7 @@ int main(void)
 	LED_Init();
 	IIC_Init();
 	SSI_GPIO_Init();
-	TIM2_IT_Init(1000-1,8400-1);	//定时器时钟 APB1*2=84M，分频系数8400，所以84M/8400=10Khz的计数频率，计数1000次为100ms
+	TIM2_IT_Init(40-1,840-1);		//定时器时钟 APB1*2=84M，分频系数840，所以84M/840=100Khz的计数频率，计数40次为400us
 	TIM3_PWM_Init(500-1,84-1);		//定时器时钟 84M/84=1Mhz,重装载值500，所以PWM频率为 1M/500=2Khz.
 	
 	mpu_t.addr = MPU_Top;
@@ -80,28 +90,86 @@ int main(void)
 		mpu_avr.gyrox = (mpu_b.gyroy - mpu_t.gyrox)/2;
 		mpu_avr.gyroy = (mpu_b.gyrox - mpu_t.gyroy)/2;
 		mpu_avr.gyroz = (mpu_b.gyroz - mpu_t.gyroz)/2;
+		mpu_avr.yaw = (mpu_t.yaw + mpu_b.yaw)/2;
 		
-		astmp = SSI_ReadPKG();
-		as2 = astmp;
-		astmp >>= 16;
-		as1 = astmp;
-		as1 >>= 4;
-		as2 >>= 4;
+//		printf("Wanl_%.1f\t%.1f\t%d\t%d\t%d\t%d\t%d\t%d\t%.2f\t%.2f\t%.2f\t|%d\t%d\t%d\t%d\t%d\t%d\t%.2f\t%.2f\t%.2f\t%d\t%d\n", 
+//				Kln, mpu_avr.temp, mpu_t.accx, mpu_t.accy, mpu_t.accz, \
+//				mpu_t.gyrox, mpu_t.gyroy, mpu_t.gyroz, mpu_t.pitch, mpu_t.roll, mpu_t.yaw, \
+//				mpu_avr.accx, mpu_avr.accy, mpu_avr.accz, \
+//				mpu_avr.gyrox, mpu_avr.gyroy, mpu_avr.gyroz, mpu_b.pitch, mpu_b.roll, mpu_avr.yaw, position_x, position_y);
+		printf("%.1f\t%.1f\t%.1f\t%.1f\n", mpu_avr.temp, TKp, TKi, TKd);
 		
-		printf("Wanl_%d\t%.1f\t%d\t%d\t%d\t%d\t%d\t%d\t%.2f\t%.2f\t%.2f\t|%d\t%d\t%d\t%d\t%d\t%d\t%.2f\t%.2f\t%.2f\t%d\t%d\n", 
-				num, mpu_avr.temp, mpu_t.accx, mpu_t.accy, mpu_t.accz, \
-				mpu_t.gyrox, mpu_t.gyroy, mpu_t.gyroz, mpu_t.pitch, mpu_t.roll, mpu_t.yaw, \
-				mpu_avr.accx, mpu_avr.accy, mpu_avr.accz, \
-				mpu_avr.gyrox, mpu_avr.gyroy, mpu_avr.gyroz, mpu_b.pitch, mpu_b.roll, mpu_b.yaw, as1, as2);
+//		USART_SendData(USART1, 0xfc);
+//		USART_SendData(USART1, 0x03);
+//		USART_SendData(USART1, 0x03);
+//		USART_SendData(USART1, 0xfc);
+//		USART_SendData(USART1, 100);
 		
-		delay_ms(100);
-		num ++;
-		if (num >= 300) num = 100;
-		TIM_SetCompare3(TIM3,00);	//修改比较值
-		TIM_SetCompare4(TIM3,00);
+		delay_ms(200);
 	}
 }
 
+void ssi_data_process(void)
+{
+	static uint16_t as1_last = 2047, as2_last = 2047;
+	uint16_t as1, as2;	//AS5045 12bit abslute angle
+	uint32_t astmp;
+	
+	astmp = SSI_ReadPKG();
+	as2 = astmp;
+	astmp >>= 16;
+	as1 = astmp;
+	as1 >>= 4;
+	as2 >>= 4;
+	
+	if(as1_last - as1 > 3000)
+	{
+		as1_count ++;
+		as1_last = as1;
+	}
+	if(as1 - as1_last > 3000)
+	{
+		as1_count --;
+		as1_last = as1;
+	}
+	
+	if(as2_last - as2 > 3000)
+	{
+		as2_count ++;
+		as2_last = as2;
+	}
+	if(as2 - as2_last > 3000)
+	{
+		as2_count --;
+		as2_last = as2;
+	}
+	
+	position_x = (as1_count + as1/4096) * Pi * diameter;
+	position_y = (as2_count + as2/4096) * Pi * diameter;
+}
+
+float Kln = 1.0f;
+uint16_t as_data_liner(uint16_t val)
+{
+	return val - Kln*sin((val/2048)*2*Pi);
+}
+
+
+float TKp = 0.0f, TKi = 0.0f, TKd = 0.0f;
+uint8_t mpu_temp_pid(uint8_t hope)
+{
+	static int8_t temp_last, bias_int;
+	int8_t temp, bias;
+	float res;
+	
+	temp = mpu_avr.temp;
+	bias = hope - temp;
+	res = TKp*bias+TKi*bias_int+TKd*(temp_last-temp);
+	bias_int += bias;
+	temp_last = temp;
+	
+	return res;
+}
 
 void RCC_ClockConfig(void)	//re-config sysclk to 168 by need
 {

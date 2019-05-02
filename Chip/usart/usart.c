@@ -36,11 +36,7 @@ int fputc(int ch, FILE *f)
 //注意,读取USARTx->SR能避免莫名其妙的错误
 uint8_t USART_RX_BUF[USART_REC_LEN];     //接收缓冲,最大USART_REC_LEN个字节.
 
-//接收状态
-//bit15，	接收完成标志
-//bit14，	接收到0x0d
-//bit13~0，	接收到的有效字节数目
-//uint16_t USART_RX_STA=0;       //接收状态标记
+uint16_t USART_RX_STA = 0;       //接收状态标记
 
 //初始化IO 串口1 
 //bound:波特率
@@ -103,25 +99,33 @@ void USART1_IRQHandler(void)	//串口1中断服务程序
 	if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)  //接收中断(接收到的数据必须是0x0d 0x0a结尾)
 	{
 		Res =USART_ReceiveData(USART1);//(USART1->DR);	//读取接收到的数据
-		USART_SendData(USART1, Res);
-//		if((USART_RX_STA&0x8000)==0)//接收未完成
-//		{
-//			if(USART_RX_STA&0x4000)//接收到了0x0d
-//			{
-//				if(Res!=0x0a)USART_RX_STA=0;//接收错误,重新开始
-//				else USART_RX_STA|=0x8000;	//接收完成了 
-//			}
-//			else //还没收到0X0D
-//			{
-//				if(Res==0x0d)USART_RX_STA|=0x4000;
-//				else
-//				{
-//					USART_RX_BUF[USART_RX_STA & 0X3FFF]=Res ;
-//					USART_RX_STA++;
-//					if(USART_RX_STA>(USART_REC_LEN-1)) USART_RX_STA=0;//接收数据错误,重新开始接收	  
-//				}
-//			}
-//		}
+
+		if(USART_RX_STA == 0)
+		{
+			if(Res == 'N') USART_RX_STA ++;
+			else USART_RX_STA = 0;
+		}
+		if(USART_RX_STA == 1)
+		{
+			if(Res == 'R') USART_RX_STA ++;
+			else USART_RX_STA = 0;
+		}
+		if(USART_RX_STA == 2)
+		{
+			USART_RX_STA = 0;
+			switch(Res)
+			{
+				case '+': Kln += 0.1f; break;
+				case '-': Kln -= 0.1f; break;
+				case 'z': TKp += 0.1f; break;
+				case 'x': TKp -= 0.1f; break;
+				case 'c': TKi += 0.1f; break;
+				case 'v': TKi -= 0.1f; break;
+				case 'b': TKd += 0.1f; break;
+				case 'n': TKd -= 0.1f; break;
+				default :break;
+			}
+		}
 	} 
 #if SYSTEM_SUPPORT_OS 	//如果SYSTEM_SUPPORT_OS为真，则需要支持OS.
 	OSIntExit();  											 
