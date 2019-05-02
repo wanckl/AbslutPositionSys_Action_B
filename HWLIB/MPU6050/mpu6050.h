@@ -75,9 +75,10 @@
  
 //如果AD0脚(9脚)接地,IIC地址为0X68(不包含最低位).
 //如果接V3.3,则IIC地址为0X69(不包含最低位).
-#define MPU_B_ADDR				0X68
-#define MPU_F_ADDR				0X69
+#define MPU_Bottom				0X68
+#define MPU_Top					0X69
 
+extern uint8_t mpu_addr;
 
 //因为开发板接GND,所以转为读写地址后,为0XD1和0XD0(如果接GND,则为0XD3和0XD2)
 //#define MPU_READ    0XD1
@@ -95,10 +96,12 @@ uint8_t MPU_Set_LPF(uint8_t addr, u16 lpf);
 uint8_t MPU_Set_Rate(uint8_t addr, u16 rate);
 uint8_t MPU_Set_Fifo(uint8_t sens);
 
-
 float	MPU_Get_Temperature(uint8_t addr);
 uint8_t MPU_Get_Gyroscope(uint8_t addr, short *gx,short *gy,short *gz);
 uint8_t MPU_Get_Accelerometer(uint8_t addr, short *ax, short *ay, short *az);
+
+uint8_t action_dmp_init(uint8_t addr);
+uint8_t action_dmp_getdata(uint8_t *addr, float *pitch,float *roll,float *yaw);
 
 #endif
 

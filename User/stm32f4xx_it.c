@@ -23,6 +23,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_it.h"
+#include "led.h"
 
 /** @addtogroup STM32F4xx_StdPeriph_Examples
   * @{
@@ -222,10 +223,17 @@ void CAN2_RX0_IRQHandler(void)
 }
 #endif  /* USE_CAN2 */
 
-/**
+/**TIM2 interrupt Handler for imu process
   * @}
   */ 
-
+void TIM2_IRQHandler(void)
+{
+	if(TIM_GetITStatus(TIM2,TIM_IT_Update)==SET) //溢出中断
+	{
+		LED0 = !LED0;	//DS0翻转
+	}
+	TIM_ClearITPendingBit(TIM2,TIM_IT_Update);  //清除中断标志位
+}
 /**
   * @}
   */ 

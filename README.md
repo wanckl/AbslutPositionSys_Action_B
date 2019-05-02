@@ -3,9 +3,17 @@
 ------------------------------
 #### My graduate design to fork a OPS for *Robocon compitition* or indoor 2D move device, which is a embeded sys on *STM32F405*, calc and output current *position info* in the coordinate system created on the start point.
 
-+ dbug_log: 04/30/2019   
++ dbug_log: 05/02/2019 
+   modify dmp driver to tow mpu6050. 
+
++ dbug_log: 05/01/2019 
+   find bug @pwm configor, modified and test OK. 
+   midify usart1 rx interrupt to recive instructions. 
+   use mpu6050 dmp driver for one sensor successful. 
+
++ dbug_log: 04/30/2019  
    add tim2 interrupt to provide a time base for imu calc, test OK.  
-   modify Heat_Res from GPIO to PWM drive mode, to get a smoth control, test OK.
+   modify Heat_Res from GPIO to PWM drive mode, to get a smoth control, test OK. 
    
 + dbug_log: 04/29/2019   
    successfully read the sensor AS5045's data,  

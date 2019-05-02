@@ -63,8 +63,8 @@
 /* labs is already defined by TI's toolchain. */
 /* fabs is for doubles. fabsf is for floats. */
 #define fabs        fabsf
-#define min(a,b) ((a<b)?a:b)
-#elif defined EMPL_TARGET_MSP430
+#define min(a,b) 	((a<b)?a:b)
+#elif	defined EMPL_TARGET_MSP430
 #include "msp430.h"
 #include "msp430_i2c.h"
 #include "msp430_clock.h"
@@ -85,7 +85,7 @@ static inline int reg_int_cb(struct int_param_s *int_param)
 /* fabs is for doubles. fabsf is for floats. */
 #define fabs        fabsf
 #define min(a,b) ((a<b)?a:b)
-#elif defined EMPL_TARGET_UC3L0
+#elif 	defined EMPL_TARGET_UC3L0
 /* Instead of using the standard TWI driver from the ASF library, we're using
  * a TWI driver that follows the slave address + register address convention.
  */
@@ -531,13 +531,14 @@ const struct gyro_reg_s reg = {
 //    ,.compass_fsr    = AK89xx_FSR
 //#endif
 //};
+
 const struct hw_s hw={
-  MPU_B_ADDR,	 //addr
-  1024,	 //max_fifo
-  118,	 //num_reg
-  340,	 //temp_sens
-  -521,	 //temp_offset
-  256		 //bank_size
+	0x68,	 //mpuB
+	1024,	 //max_fifo
+	118,	 //num_reg
+	340,	 //temp_sens
+	-521,	 //temp_offset
+	256	 	 //bank_size
 };
 
 //const struct test_s test = {
@@ -2849,18 +2850,7 @@ lp_int_restore:
     st.chip_cfg.int_motion_only = 0;
     return 0;
 }
-//////////////////////////////////////////////////////////////////////////////////
-//添加的代码部分
-//////////////////////////////////////////////////////////////////////////////////	  
-//ALIENTEK STM32F407开发板
-//MPU6050 DMP 驱动代码	   
-//正点原子@ALIENTEK
-//技术论坛:www.openedv.com
-//创建日期:2014/5/9
-//版本：V1.0 
-//Copyright(C) 广州市星翼电子科技有限公司 2014-2024
-//All rights reserved									  
-////////////////////////////////////////////////////////////////////////////////// 
+
 
 //q30格式,long转float时的除数.
 #define q30  1073741824.0f
@@ -2946,17 +2936,16 @@ void mget_ms(unsigned long *time)
 
 }
 //mpu6050,dmp初始化
-//返回值:0,正常
+//返回值:0,成功
 //    其他,失败
-u8 mpu_dmp_init(void)
+uint8_t mpu_dmp_init(void)
 {
-	u8 res=0;
-	IIC_Init(); 		//初始化IIC总线
+	uint8_t res=0;
 	if(mpu_init()==0)	//初始化MPU6050
 	{	 
-		res=mpu_set_sensors(INV_XYZ_GYRO|INV_XYZ_ACCEL);//设置所需要的传感器
+		res=mpu_set_sensors(INV_XYZ_GYRO|INV_XYZ_ACCEL);		//设置所需要的传感器
 		if(res)return 1; 
-		res=mpu_configure_fifo(INV_XYZ_GYRO | INV_XYZ_ACCEL);//设置FIFO
+		res=mpu_configure_fifo(INV_XYZ_GYRO | INV_XYZ_ACCEL);	//设置FIFO
 		if(res)return 2; 
 		res=mpu_set_sample_rate(DEFAULT_MPU_HZ);	//设置采样率
 		if(res)return 3; 
@@ -2964,7 +2953,7 @@ u8 mpu_dmp_init(void)
 		if(res)return 4; 
 		res=dmp_set_orientation(inv_orientation_matrix_to_scalar(gyro_orientation));//设置陀螺仪方向
 		if(res)return 5; 
-		res=dmp_enable_feature(DMP_FEATURE_6X_LP_QUAT|DMP_FEATURE_TAP|	//设置dmp功能
+		res=dmp_enable_feature(DMP_FEATURE_6X_LP_QUAT|DMP_FEATURE_TAP|				//设置dmp功能
 		    DMP_FEATURE_ANDROID_ORIENT|DMP_FEATURE_SEND_RAW_ACCEL|DMP_FEATURE_SEND_CAL_GYRO|
 		    DMP_FEATURE_GYRO_CAL);
 		if(res)return 6; 
@@ -2975,15 +2964,17 @@ u8 mpu_dmp_init(void)
 		res=mpu_set_dmp_state(1);	//使能DMP
 		if(res)return 9;     
 	}
+	else return -1;
 	return 0;
 }
+
 //得到dmp处理后的数据(注意,本函数需要比较多堆栈,局部变量有点多)
 //pitch:俯仰角 精度:0.1°   范围:-90.0° <---> +90.0°
 //roll:横滚角  精度:0.1°   范围:-180.0°<---> +180.0°
 //yaw:航向角   精度:0.1°   范围:-180.0°<---> +180.0°
 //返回值:0,正常
 //    其他,失败
-u8 mpu_dmp_get_data(float *pitch,float *roll,float *yaw)
+uint8_t mpu_dmp_get_data(float *pitch,float *roll,float *yaw)
 {
 	float q0=1.0f,q1=0.0f,q2=0.0f,q3=0.0f;
 	unsigned long sensor_timestamp;
@@ -3014,25 +3005,4 @@ u8 mpu_dmp_get_data(float *pitch,float *roll,float *yaw)
 	}else return 2;
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -31,13 +31,3 @@ void TIM2_IT_Init(u16 arr,u16 psc)
 	
 }
 
-
-void TIM2_IRQHandler(void)
-{
-	if(TIM_GetITStatus(TIM2,TIM_IT_Update)==SET) //溢出中断
-	{
-		LED0 = !LED0;	//DS0翻转
-	}
-	TIM_ClearITPendingBit(TIM2,TIM_IT_Update);  //清除中断标志位
-}
-

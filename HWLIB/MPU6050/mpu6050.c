@@ -2,6 +2,7 @@
 #include "sys.h"
 #include "delay.h"
 #include "usart.h"
+#include "inv_mpu.h"
 
 //初始化MPU6050
 //返回值:0,成功
@@ -130,11 +131,12 @@ uint8_t MPU_Get_Accelerometer(uint8_t addr, short *ax, short *ay, short *az)
 //buf:数据区
 //返回值:0,正常
 //    其他,错误代码
-uint8_t MPU_Write_Len(uint8_t addr,uint8_t reg,uint8_t len,uint8_t *buf)
+uint8_t MPU_Write_Len(uint8_t addr, uint8_t reg, uint8_t len, uint8_t *buf)
 {
-	uint8_t i; 
+	uint8_t i;
+	addr = mpu_addr;
     IIC_Start(); 
-	IIC_Send_Byte((addr<<1)|0);//发送器件地址+写命令	
+	IIC_Send_Byte((addr<<1)|0);//发送器件地址+写命令
 	if(IIC_Wait_Ack())	//等待应答
 	{
 		IIC_Stop();		 
@@ -149,8 +151,8 @@ uint8_t MPU_Write_Len(uint8_t addr,uint8_t reg,uint8_t len,uint8_t *buf)
 		{
 			IIC_Stop();	 
 			return 1;		 
-		}		
-	}    
+		}
+	}
     IIC_Stop();	 
 	return 0;	
 } 
@@ -162,7 +164,8 @@ uint8_t MPU_Write_Len(uint8_t addr,uint8_t reg,uint8_t len,uint8_t *buf)
 //返回值:0,正常
 //    其他,错误代码
 uint8_t MPU_Read_Len(uint8_t addr,uint8_t reg,uint8_t len,uint8_t *buf)
-{ 
+{
+	addr = mpu_addr;
  	IIC_Start(); 
 	IIC_Send_Byte((addr<<1)|0);//发送器件地址+写命令	
 	if(IIC_Wait_Ack())	//等待应答
@@ -191,22 +194,23 @@ uint8_t MPU_Read_Len(uint8_t addr,uint8_t reg,uint8_t len,uint8_t *buf)
 //返回值:0,正常
 //    其他,错误代码
 uint8_t MPU_Write_Byte(uint8_t addr, uint8_t reg, uint8_t data) 				 
-{ 
+{
+	addr = mpu_addr;
     IIC_Start(); 
-		IIC_Send_Byte((addr << 1) | 0);//发送器件地址+写命令	
-		if(IIC_Wait_Ack())	//等待应答
-		{
-			IIC_Stop();		 
-			return 1;		
-		}
+	IIC_Send_Byte((addr << 1) | 0);//发送器件地址+写命令	
+	if(IIC_Wait_Ack())	//等待应答
+	{
+		IIC_Stop();		 
+		return 1;		
+	}
     IIC_Send_Byte(reg);	//写寄存器地址
     IIC_Wait_Ack();		//等待应答 
-		IIC_Send_Byte(data);//发送数据
-		if(IIC_Wait_Ack())	//等待ACK
-		{
-			IIC_Stop();	 
-			return 1;		 
-		}		 
+	IIC_Send_Byte(data);//发送数据
+	if(IIC_Wait_Ack())	//等待ACK
+	{
+		IIC_Stop();	 
+		return 1;		 
+	}		 
     IIC_Stop();	 
 	return 0;
 }
@@ -216,6 +220,7 @@ uint8_t MPU_Write_Byte(uint8_t addr, uint8_t reg, uint8_t data)
 uint8_t MPU_Read_Byte(uint8_t addr, uint8_t reg)
 {
 	uint8_t res;
+	addr = mpu_addr;
     IIC_Start(); 
 	IIC_Send_Byte((addr << 1)|0);//发送器件地址+写命令	
 	IIC_Wait_Ack();		//等待应答 
@@ -229,4 +234,16 @@ uint8_t MPU_Read_Byte(uint8_t addr, uint8_t reg)
 	return res;		
 }
 
+uint8_t action_dmp_init(uint8_t addr)
+{
+	mpu_addr = addr;
+	return mpu_dmp_init();
+}
 
+uint8_t action_dmp_getdata(uint8_t *addr, float *pitch,float *roll,float *yaw)
+{
+	mpu_addr = *addr;
+	return mpu_dmp_get_data(pitch, roll, yaw);
+}
+
+uint8_t mpu_addr = 0;
