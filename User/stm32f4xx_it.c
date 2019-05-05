@@ -223,24 +223,34 @@ void CAN2_RX0_IRQHandler(void)
 }
 #endif  /* USE_CAN2 */
 
-/**TIM2 interrupt Handler for imu process
+/**TIM2 interrupt Handler for time base source
   * @}
   */ 
+uint8_t imu_get_flag = 0, display_flag = 0;
 void TIM2_IRQHandler(void)
 {
-	static uint16_t timer;
-	uint8_t res;
+	static uint8_t timer_10ms;
+	static uint16_t timer_res;
+	uint16_t res = 0;
 	
 	if(TIM_GetITStatus(TIM2,TIM_IT_Update)==SET) //溢出中断
 	{
-		timer ++;
-		if(timer >= 1250)	//0.5s timer base
+		timer_res ++;
+		timer_10ms ++;
+		if(timer_10ms >= 25)
 		{
-			timer = 0;
+			timer_10ms = 0;
+			imu_get_flag = 1;
+		}
+		if(timer_res >= 1250)	//0.5s timer_res base
+		{
+			timer_res = 0;
 			LED0 = ~LED0;
-			res = mpu_temp_pid(50);
-			TIM_SetCompare3(TIM3,res);	//修改比较值
-			TIM_SetCompare4(TIM3,res);
+			res = mpu_temp_pid(40);
+			res <<= 1;
+			TIM_SetCompare3(TIM3,res);	//Hate Res at Bottom
+			TIM_SetCompare4(TIM3,res + 35);	//Top Layer
+			display_flag = 1;
 		}
 		ssi_data_process();
 	}

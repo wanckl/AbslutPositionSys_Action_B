@@ -12,9 +12,9 @@
 #pragma import(__use_no_semihosting)             
 //标准库需要的支持函数                 
 struct __FILE 
-{ 
-	int handle; 
-}; 
+{
+	int handle;
+};
 
 FILE __stdout;       
 //定义_sys_exit()以避免使用半主机模式    
@@ -24,9 +24,9 @@ _sys_exit(int x)
 } 
 //重定义fputc函数 
 int fputc(int ch, FILE *f)
-{ 	
-	while((USART1->SR&0X40)==0);//循环发送,直到发送完毕   
-	USART1->DR = (u8) ch;      
+{
+	while((USART1->SR&0X40)==0);//循环发送,直到发送完毕 
+	USART1->DR = (u8) ch;
 	return ch;
 }
 
@@ -59,7 +59,7 @@ void uart_init(u32 bound)
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;		//复用功能
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;	//速度50MHz
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP; 		//推挽复用输出
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP; 		//上拉
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL; 		//上拉
 	GPIO_Init(GPIOA,&GPIO_InitStructure); 				//初始化PA9，PA10
 
     //USART1 初始化设置
@@ -81,7 +81,7 @@ void uart_init(u32 bound)
 	//Usart1 NVIC 配置
 	NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;		//串口1中断通道
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority=3;	//抢占优先级3
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority =3;		//子优先级3
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority =0;		//子优先级0
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;			//IRQ通道使能
 	NVIC_Init(&NVIC_InitStructure);	//根据指定的参数初始化VIC寄存器
 
@@ -99,33 +99,35 @@ void USART1_IRQHandler(void)	//串口1中断服务程序
 	if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)  //接收中断(接收到的数据必须是0x0d 0x0a结尾)
 	{
 		Res =USART_ReceiveData(USART1);//(USART1->DR);	//读取接收到的数据
-
+		USART_SendData(USART1, Res);
+		
 		if(USART_RX_STA == 0)
 		{
-			if(Res == 'N') USART_RX_STA ++;
+			if(Res == 'S') USART_RX_STA ++;
 			else USART_RX_STA = 0;
 		}
-		if(USART_RX_STA == 1)
+		else if(USART_RX_STA == 1)
 		{
-			if(Res == 'R') USART_RX_STA ++;
+			if(Res == 'T') USART_RX_STA ++;
 			else USART_RX_STA = 0;
 		}
-		if(USART_RX_STA == 2)
+		else if(USART_RX_STA == 2)
 		{
 			USART_RX_STA = 0;
 			switch(Res)
 			{
-				case '+': Kln += 0.1f; break;
-				case '-': Kln -= 0.1f; break;
-				case 'z': TKp += 0.1f; break;
-				case 'x': TKp -= 0.1f; break;
-				case 'c': TKi += 0.1f; break;
-				case 'v': TKi -= 0.1f; break;
-				case 'b': TKd += 0.1f; break;
-				case 'n': TKd -= 0.1f; break;
-				default :break;
+//				case '1': Kln += 10; printf("Kln=%d\n", Kln); break;
+//				case '2': Kln -= 10; printf("Kln=%d\n", Kln); break;
+//				case '3': TKp += 1.0f; printf("TKp=%.1f\n", TKp); break;
+//				case '4': TKp -= 1.0f; break;
+//				case '5': TKi += 0.1f; break;
+//				case '6': TKi -= 0.1f; break;
+//				case '7': TKd += 0.1f; break;
+//				case '8': TKd -= 0.1f; break;
+				default : USART_SendData(USART1, Res); break;
 			}
 		}
+		else USART_RX_STA = 0;
 	} 
 #if SYSTEM_SUPPORT_OS 	//如果SYSTEM_SUPPORT_OS为真，则需要支持OS.
 	OSIntExit();  											 
