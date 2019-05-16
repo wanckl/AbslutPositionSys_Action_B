@@ -78,6 +78,15 @@
 #define MPU_Bottom				0X68
 #define MPU_Top					0X69
 
+typedef struct
+{
+	uint8_t addr;
+	float pitch, roll, yaw;			//欧拉角
+	short accx, accy, accz;			//加速度原始数据
+	short gyrox, gyroy, gyroz;		//角速度原始数据
+	float temp;						//温度
+} imu_struct;
+
 extern uint8_t mpu_addr;
 
 //因为开发板接GND,所以转为读写地址后,为0XD1和0XD0(如果接GND,则为0XD3和0XD2)
@@ -101,7 +110,7 @@ uint8_t MPU_Get_Gyroscope(uint8_t addr, short *gx,short *gy,short *gz);
 uint8_t MPU_Get_Accelerometer(uint8_t addr, short *ax, short *ay, short *az);
 
 uint8_t action_dmp_init(uint8_t addr);
-uint8_t action_dmp_getdata(uint8_t *addr, float *pitch,float *roll,float *yaw);
+uint8_t action_dmp_getdata(float *pitch,float *roll,float *yaw, imu_struct *mpustru);
 
 #endif
 

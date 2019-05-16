@@ -1,4 +1,3 @@
-=======
 ## AbslutPositionSys_Action_B
 
 ------------------------------
@@ -34,4 +33,3 @@
    successfully read origin data from MPU6050 imu sensor.  
    waitting for data-processing and AS5045.
 
-************************EOF*******************************

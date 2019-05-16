@@ -240,10 +240,11 @@ uint8_t action_dmp_init(uint8_t addr)
 	return mpu_dmp_init();
 }
 
-uint8_t action_dmp_getdata(uint8_t *addr, float *pitch,float *roll,float *yaw)
+uint8_t action_dmp_getdata(float *pitch,float *roll,float *yaw, imu_struct *mpustru)
 {
-	mpu_addr = *addr;
-	return mpu_dmp_get_data(pitch, roll, yaw);
+	mpu_addr = mpustru->addr;
+	mpustru->temp = MPU_Get_Temperature(mpu_addr);	//得到温度值
+	return mpu_dmp_get_data(pitch, roll, yaw, mpustru);
 }
 
-uint8_t mpu_addr = 0;
+uint8_t mpu_addr = 0xff;

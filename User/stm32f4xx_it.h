@@ -55,7 +55,7 @@ void SysTick_Handler(void);
 }
 #endif
 
-extern uint8_t imu_get_flag, display_flag;
+extern uint8_t imu_get_flag, velocity_flag;
 extern void ssi_data_process(void);
 extern uint8_t mpu_temp_pid(uint8_t hope);
 

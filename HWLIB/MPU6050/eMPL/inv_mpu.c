@@ -23,8 +23,6 @@
 #include <string.h>
 #include <math.h>
 #include "inv_mpu.h"
-#include "inv_mpu_dmp_motion_driver.h"
-#include "mpu6050.h"
 #include "delay.h"
 #include "usart.h"
 
@@ -749,7 +747,7 @@ int mpu_read_reg(unsigned char reg, unsigned char *data)
 /**
  *  @brief      Initialize hardware.
  *  Initial configuration:\n
- *  Gyro FSR: +/- 2000DPS\n
+ *  Gyro FSR: +/- 1000DPS\n
  *  Accel FSR +/- 2G\n
  *  DLPF: 42Hz\n
  *  FIFO rate: 50Hz\n
@@ -846,7 +844,7 @@ int mpu_init(void)
     st.chip_cfg.dmp_loaded = 0;
     st.chip_cfg.dmp_sample_rate = 0;
 
-    if (mpu_set_gyro_fsr(2000))
+    if (mpu_set_gyro_fsr(1000))
         return -1;
     if (mpu_set_accel_fsr(2))
         return -1;
@@ -2974,34 +2972,36 @@ uint8_t mpu_dmp_init(void)
 //yaw:航向角   精度:0.1°   范围:-180.0°<---> +180.0°
 //返回值:0,正常
 //    其他,失败
-uint8_t mpu_dmp_get_data(float *pitch,float *roll,float *yaw)
+uint8_t mpu_dmp_get_data(float *pitch,float *roll,float *yaw, imu_struct *mpustru)
 {
 	float q0=1.0f,q1=0.0f,q2=0.0f,q3=0.0f;
 	unsigned long sensor_timestamp;
-	short gyro[3], accel[3], sensors;
+	short accl[3], gyro[3], sensors;
 	unsigned char more;
 	long quat[4]; 
-	if(dmp_read_fifo(gyro, accel, quat, &sensor_timestamp, &sensors,&more))return 1;	 
+	if(dmp_read_fifo(gyro, accl, quat, &sensor_timestamp, &sensors,&more))return 1;	
 	/* Gyro and accel data are written to the FIFO by the DMP in chip frame and hardware units.
 	 * This behavior is convenient because it keeps the gyro and accel outputs of dmp_read_fifo and mpu_read_fifo consistent.
 	**/
-	/*if (sensors & INV_XYZ_GYRO )
-	send_packet(PACKET_TYPE_GYRO, gyro);
-	if (sensors & INV_XYZ_ACCEL)
-	send_packet(PACKET_TYPE_ACCEL, accel); */
+	mpustru->accx = accl[0];
+	mpustru->accy = accl[1];
+	mpustru->accz = accl[2];
+	mpustru->gyrox = gyro[0];
+	mpustru->gyroy = gyro[1];
+	mpustru->gyroz = gyro[2];
 	/* Unlike gyro and accel, quaternions are written to the FIFO in the body frame, q30.
 	 * The orientation is set by the scalar passed to dmp_set_orientation during initialization. 
 	**/
-	if(sensors&INV_WXYZ_QUAT) 
+	if(sensors&INV_WXYZ_QUAT)
 	{
 		q0 = quat[0] / q30;	//q30格式转换为浮点数
 		q1 = quat[1] / q30;
 		q2 = quat[2] / q30;
 		q3 = quat[3] / q30; 
 		//计算得到俯仰角/横滚角/航向角
-		*pitch = asin(-2 * q1 * q3 + 2 * q0* q2)* 57.3;	// pitch
-		*roll  = atan2(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2* q2 + 1)* 57.3;	// roll
-		*yaw   = atan2(2*(q1*q2 + q0*q3),q0*q0+q1*q1-q2*q2-q3*q3) * 57.3;	//yaw
+		*roll  =  asin(-2 * q1 * q3 + 2 * q0* q2)* 57.3;	// pitch
+		*pitch =  atan2(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2* q2 + 1)* 57.3;	// roll
+		*yaw   = -atan2(2*(q1*q2 + q0*q3),q0*q0+q1*q1-q2*q2-q3*q3) * 57.3;	//yaw
 	}else return 2;
 	return 0;
 }

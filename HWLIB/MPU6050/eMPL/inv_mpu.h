@@ -21,6 +21,10 @@
 #ifndef _INV_MPU_H_
 #define _INV_MPU_H_
 #include "stm32f4xx.h"
+#include "mpu6050.h"
+#include "inv_mpu.h"
+#include "inv_mpu_dmp_motion_driver.h"
+
 
 //定义输出速度
 #define DEFAULT_MPU_HZ  (100)		//100Hz
@@ -128,7 +132,7 @@ unsigned short inv_row_2_scale(const signed char *row);
 unsigned short inv_orientation_matrix_to_scalar(const signed char *mtx);
 uint8_t run_self_test(void);
 uint8_t mpu_dmp_init(void);
-uint8_t mpu_dmp_get_data(float *pitch,float *roll,float *yaw);
+uint8_t mpu_dmp_get_data(float *pitch,float *roll,float *yaw, imu_struct *mpustru);
 
 #endif  /* #ifndef _INV_MPU_H_ */
 

@@ -226,14 +226,14 @@ void CAN2_RX0_IRQHandler(void)
 /**TIM2 interrupt Handler for time base source
   * @}
   */ 
-uint8_t imu_get_flag = 0, display_flag = 0;
+uint8_t imu_get_flag = 0, velocity_flag = 0;
 void TIM2_IRQHandler(void)
 {
 	static uint8_t timer_10ms;
 	static uint16_t timer_res;
 	uint16_t res = 0;
 	
-	if(TIM_GetITStatus(TIM2,TIM_IT_Update)==SET) //溢出中断
+	if(TIM_GetITStatus(TIM2,TIM_IT_Update)==SET) //400 us溢出中断
 	{
 		timer_res ++;
 		timer_10ms ++;
@@ -246,11 +246,11 @@ void TIM2_IRQHandler(void)
 		{
 			timer_res = 0;
 			LED0 = ~LED0;
-			res = mpu_temp_pid(40);
+			velocity_flag = 1;
+			res = mpu_temp_pid(10);
 			res <<= 1;
 			TIM_SetCompare3(TIM3,res);	//Hate Res at Bottom
-			TIM_SetCompare4(TIM3,res + 35);	//Top Layer
-			display_flag = 1;
+			TIM_SetCompare4(TIM3,res);	//Top Layer
 		}
 		ssi_data_process();
 	}
