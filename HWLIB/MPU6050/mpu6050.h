@@ -75,8 +75,7 @@
  
 //如果AD0脚(9脚)接地,IIC地址为0X68(不包含最低位).
 //如果接V3.3,则IIC地址为0X69(不包含最低位).
-#define MPU_Bottom				0X68
-#define MPU_Top					0X69
+#define MPU_ADDR				0X68
 
 typedef struct
 {
@@ -87,19 +86,18 @@ typedef struct
 	float temp;						//温度
 } imu_struct;
 
-extern uint8_t mpu_addr;
 
 //因为开发板接GND,所以转为读写地址后,为0XD1和0XD0(如果接GND,则为0XD3和0XD2)
 //#define MPU_READ    0XD1
 //#define MPU_WRITE   0XD0
 
-uint8_t MPU_Init(uint8_t addr); 										  //初始化MPU6050
-uint8_t MPU_Write_Len(uint8_t addr,uint8_t reg,uint8_t len,uint8_t *buf); //IIC连续写
-uint8_t MPU_Read_Len(uint8_t addr,uint8_t reg,uint8_t len,uint8_t *buf);  //IIC连续读 
+uint8_t MPU_Init(uint8_t addr); 										 //初始化MPU6050
+uint8_t MPU_Write_Len(uint8_t addr, uint8_t reg,uint8_t len,uint8_t *buf); //IIC连续写
+uint8_t MPU_Read_Len(uint8_t addr, uint8_t reg,uint8_t len,uint8_t *buf);  //IIC连续读 
 uint8_t MPU_Write_Byte(uint8_t addr, uint8_t reg, uint8_t data);		  //IIC写一个字节
 uint8_t MPU_Read_Byte(uint8_t addr, uint8_t reg);						  //IIC读一个字节
 
-uint8_t MPU_Set_Gyro_Fsr(uint8_t addr, u8 fsr);
+uint8_t MPU_Set_Gyro_Fsr(uint8_t addr, uint8_t fsr);
 uint8_t MPU_Set_Accel_Fsr(uint8_t addr, uint8_t fsr);
 uint8_t MPU_Set_LPF(uint8_t addr, u16 lpf);
 uint8_t MPU_Set_Rate(uint8_t addr, u16 rate);
@@ -109,7 +107,6 @@ float	MPU_Get_Temperature(uint8_t addr);
 uint8_t MPU_Get_Gyroscope(uint8_t addr, short *gx,short *gy,short *gz);
 uint8_t MPU_Get_Accelerometer(uint8_t addr, short *ax, short *ay, short *az);
 
-uint8_t action_dmp_init(uint8_t addr);
 uint8_t action_dmp_getdata(float *pitch,float *roll,float *yaw, imu_struct *mpustru);
 
 #endif

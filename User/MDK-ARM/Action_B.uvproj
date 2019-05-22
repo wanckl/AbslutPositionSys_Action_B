@@ -361,7 +361,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F4XX, USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\;..\..\Libraries\CMSIS\Device\ST\STM32F4xx\Include;..\..\Libraries\STM32F4xx_StdPeriph_Driver\inc;..\..\Chip\delay;..\..\Chip\sys;..\..\Chip\usart;..\..\Chip\iic;..\..\Chip\ssi;..\..\Chip\timer;..\..\Chip\pwm;..\..\HWLIB\LED;..\..\HWLIB\MPU6050\eMPL;..\..\HWLIB\MPU6050</IncludePath>
+              <IncludePath>..\;..\..\Libraries\CMSIS\Device\ST\STM32F4xx\Include;..\..\Libraries\STM32F4xx_StdPeriph_Driver\inc;..\..\Chip\delay;..\..\Chip\sys;..\..\Chip\usart;..\..\Chip\iic;..\..\Chip\ssi;..\..\Chip\timer;..\..\Chip\pwm;..\..\HWLIB\LED;..\..\HWLIB\MPU6050;..\..\HWLIB\MPU6050\eMPL;..\..\HWLIB\MPU6050\AHRS</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -439,6 +439,16 @@
               <FileType>1</FileType>
               <FilePath>..\..\HWLIB\LED\led.c</FilePath>
             </File>
+            <File>
+              <FileName>ahrs.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HWLIB\MPU6050\AHRS\ahrs.c</FilePath>
+            </File>
+            <File>
+              <FileName>mpu9250.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HWLIB\MPU6050\mpu9250.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -478,6 +488,11 @@
               <FileName>timer.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Chip\timer\timer.c</FilePath>
+            </File>
+            <File>
+              <FileName>iic2.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Chip\iic\iic2.c</FilePath>
             </File>
           </Files>
         </Group>

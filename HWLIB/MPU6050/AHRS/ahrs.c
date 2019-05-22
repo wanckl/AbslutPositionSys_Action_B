@@ -39,27 +39,28 @@ void get_euler_angle(float gx, float gy, float gz, float ax, float ay, float az,
 	float recipNorm;
 	float vx, vy, vz;
 	float ex, ey, ez;
-	
+
 	gx *= GYRO_PRE;
-    gy *= GYRO_PRE;
-    gz *= GYRO_PRE;
+	gy *= GYRO_PRE;
+	gz *= GYRO_PRE;
 
 	if(ax*ay*az==0)
  		return;
 		
 	gx *= A2R;
-    gy *= A2R;
-    gz *= A2R;
-	
+	gy *= A2R;
+	gz *= A2R;
+
 	// Normalise accelerometer measurement
 	// 归一化
 	recipNorm = invSqrt(ax*ax + ay*ay + az*az);
 	ax *= recipNorm;
 	ay *= recipNorm;
 	az *= recipNorm;
+	gravity = 1/recipNorm;
 
 	// Estimated direction of gravity and vector perpendicular to magnetic flux
-    // 根据当前四元数姿态值估计各重力分量  用于和加速度计测量的重力分量做对比
+	// 根据当前四元数姿态值估计各重力分量  用于和加速度计测量的重力分量做对比
 	vx = q1*q3 - q0*q2;
 	vy = q0*q1 + q2*q3;
 	vz = q0*q0 - 0.5f + q3*q3;

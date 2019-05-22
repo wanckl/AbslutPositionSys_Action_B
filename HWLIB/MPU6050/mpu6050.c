@@ -14,21 +14,20 @@ uint8_t MPU_Init(uint8_t addr)
 	MPU_Write_Byte(addr, MPU_PWR_MGMT1_REG, 0X80);	//复位MPU6050
 	delay_ms(100);
 	ID = MPU_Read_Byte(addr, MPU_DEVICE_ID_REG);
-	printf("0x%x = 0x%x -- ", addr, ID);
-	if(ID == 0x68)//器件ID正确
+	printf("ID = 0x%x--------------", ID);
+	if(ID != 0xFF)	//器件ID正确
 	{
-		printf("MPU6050 @ 0x%x detected\n\n", addr);
-		
 		MPU_Write_Byte(addr, MPU_PWR_MGMT1_REG,0X00);	//唤醒MPU6050 
-		MPU_Set_Gyro_Fsr(addr, 3);						//陀螺仪传感器,±2000dps
-		MPU_Set_Accel_Fsr(addr, 0);						//加速度传感器,±2g
-		MPU_Set_Rate(addr, 50);							//设置采样率50Hz
-		MPU_Write_Byte(addr, MPU_INT_EN_REG,0X00);		//关闭所有中断
-		MPU_Write_Byte(addr, MPU_USER_CTRL_REG,0X00);	//I2C主模式关闭
-		MPU_Write_Byte(addr, MPU_FIFO_EN_REG,0X00);		//关闭FIFO
-		MPU_Write_Byte(addr, MPU_INTBP_CFG_REG,0X80);	//INT引脚低电平有效
-		MPU_Write_Byte(addr, MPU_PWR_MGMT1_REG,0X01);	//设置CLKSEL,PLL X轴为参考
-		MPU_Write_Byte(addr, MPU_PWR_MGMT2_REG,0X00);	//加速度与陀螺仪都工作
+		MPU_Set_Gyro_Fsr(addr, 3);					//陀螺仪传感器,±2000dps
+		MPU_Set_Accel_Fsr(addr, 0);					//加速度传感器,±2g
+		MPU_Set_Rate(addr, 50);						//设置采样率50Hz
+		MPU_Write_Byte(addr, MPU_CFG_REG,0X06);		//低通滤波器的设置，截止频率是1K，带宽是5K
+//		MPU_Write_Byte(addr, MPU_INT_EN_REG,0X00);	//关闭所有中断
+//		MPU_Write_Byte(addr, MPU_USER_CTRL_REG,0X00);	//I2C主模式关闭
+//		MPU_Write_Byte(addr, MPU_FIFO_EN_REG,0X00);	//关闭FIFO
+//		MPU_Write_Byte(addr, MPU_INTBP_CFG_REG,0X80);	//INT引脚低电平有效
+//		MPU_Write_Byte(addr, MPU_PWR_MGMT1_REG,0X01);	//设置CLKSEL,PLL X轴为参考
+//		MPU_Write_Byte(addr, MPU_PWR_MGMT2_REG,0X00);	//加速度与陀螺仪都工作
 	}
 	else return 1;
 	return 0;
@@ -65,7 +64,7 @@ uint8_t MPU_Set_LPF(uint8_t addr, u16 lpf)
 	else if(lpf>=20)data=4;
 	else if(lpf>=10)data=5;
 	else data=6; 
-	return MPU_Write_Byte(addr, MPU_CFG_REG,data);//设置数字低通滤波器  
+	return MPU_Write_Byte(addr, MPU_CFG_REG,data);//设置数字低通滤波器
 }
 //设置MPU6050的采样率(假定Fs=1KHz)
 //rate:4~1000(Hz)
@@ -99,11 +98,11 @@ float MPU_Get_Temperature(uint8_t addr)
 uint8_t MPU_Get_Gyroscope(uint8_t addr, short *gx,short *gy,short *gz)
 {
 		uint8_t buf[6],res;  
-		res=MPU_Read_Len(addr,MPU_GYRO_XOUTH_REG,6,buf);
+		res=MPU_Read_Len(addr, MPU_GYRO_XOUTH_REG,6,buf);
 		if(res==0)
 		{
-			*gx=((u16)buf[0]<<8)|buf[1];  
-			*gy=((u16)buf[2]<<8)|buf[3];  
+			*gx=((u16)buf[0]<<8)|buf[1];
+			*gy=((u16)buf[2]<<8)|buf[3];
 			*gz=((u16)buf[4]<<8)|buf[5];
 		} 	
     return res;;
@@ -115,7 +114,7 @@ uint8_t MPU_Get_Gyroscope(uint8_t addr, short *gx,short *gy,short *gz)
 uint8_t MPU_Get_Accelerometer(uint8_t addr, short *ax, short *ay, short *az)
 {
     uint8_t buf[6],res;  
-		res=MPU_Read_Len(addr,MPU_ACCEL_XOUTH_REG,6,buf);
+		res=MPU_Read_Len(addr, MPU_ACCEL_XOUTH_REG,6,buf);
 		if(res==0)
 		{
 			*ax=((u16)buf[0]<<8)|buf[1];  
@@ -134,7 +133,6 @@ uint8_t MPU_Get_Accelerometer(uint8_t addr, short *ax, short *ay, short *az)
 uint8_t MPU_Write_Len(uint8_t addr, uint8_t reg, uint8_t len, uint8_t *buf)
 {
 	uint8_t i;
-	addr = mpu_addr;
     IIC_Start(); 
 	IIC_Send_Byte((addr<<1)|0);//发送器件地址+写命令
 	if(IIC_Wait_Ack())	//等待应答
@@ -163,9 +161,8 @@ uint8_t MPU_Write_Len(uint8_t addr, uint8_t reg, uint8_t len, uint8_t *buf)
 //buf:读取到的数据存储区
 //返回值:0,正常
 //    其他,错误代码
-uint8_t MPU_Read_Len(uint8_t addr,uint8_t reg,uint8_t len,uint8_t *buf)
+uint8_t MPU_Read_Len(uint8_t addr, uint8_t reg,uint8_t len,uint8_t *buf)
 {
-	addr = mpu_addr;
  	IIC_Start(); 
 	IIC_Send_Byte((addr<<1)|0);//发送器件地址+写命令	
 	if(IIC_Wait_Ack())	//等待应答
@@ -195,7 +192,6 @@ uint8_t MPU_Read_Len(uint8_t addr,uint8_t reg,uint8_t len,uint8_t *buf)
 //    其他,错误代码
 uint8_t MPU_Write_Byte(uint8_t addr, uint8_t reg, uint8_t data) 				 
 {
-	addr = mpu_addr;
     IIC_Start(); 
 	IIC_Send_Byte((addr << 1) | 0);//发送器件地址+写命令	
 	if(IIC_Wait_Ack())	//等待应答
@@ -220,7 +216,6 @@ uint8_t MPU_Write_Byte(uint8_t addr, uint8_t reg, uint8_t data)
 uint8_t MPU_Read_Byte(uint8_t addr, uint8_t reg)
 {
 	uint8_t res;
-	addr = mpu_addr;
     IIC_Start(); 
 	IIC_Send_Byte((addr << 1)|0);//发送器件地址+写命令	
 	IIC_Wait_Ack();		//等待应答 
@@ -234,17 +229,9 @@ uint8_t MPU_Read_Byte(uint8_t addr, uint8_t reg)
 	return res;		
 }
 
-uint8_t action_dmp_init(uint8_t addr)
-{
-	mpu_addr = addr;
-	return mpu_dmp_init();
-}
-
 uint8_t action_dmp_getdata(float *pitch,float *roll,float *yaw, imu_struct *mpustru)
 {
-	mpu_addr = mpustru->addr;
-	mpustru->temp = MPU_Get_Temperature(mpu_addr);	//得到温度值
+	mpustru->temp = MPU_Get_Temperature((*mpustru).addr);	//得到温度值
 	return mpu_dmp_get_data(pitch, roll, yaw, mpustru);
 }
 
-uint8_t mpu_addr = 0xff;

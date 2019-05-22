@@ -531,7 +531,7 @@ const struct gyro_reg_s reg = {
 //};
 
 const struct hw_s hw={
-	0x68,	 //mpuB
+	0x68,	 //addr
 	1024,	 //max_fifo
 	118,	 //num_reg
 	340,	 //temp_sens

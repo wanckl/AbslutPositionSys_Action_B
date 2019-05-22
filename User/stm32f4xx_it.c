@@ -246,11 +246,11 @@ void TIM2_IRQHandler(void)
 		{
 			timer_res = 0;
 			LED0 = ~LED0;
-			velocity_flag = 1;
-			res = mpu_temp_pid(10);
+//			velocity_flag = 1;
+			res = mpu_temp_pid(60);
 			res <<= 1;
-			TIM_SetCompare3(TIM3,res);	//Hate Res at Bottom
-			TIM_SetCompare4(TIM3,res);	//Top Layer
+			TIM_SetCompare3(TIM3,0);	//Hate Res at Bottom
+			TIM_SetCompare4(TIM3,0);	//Top Layer
 		}
 		ssi_data_process();
 	}

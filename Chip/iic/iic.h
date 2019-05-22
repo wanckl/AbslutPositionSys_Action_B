@@ -21,20 +21,7 @@ uint8_t IIC_Wait_Ack(void); 				//IIC等待ACK信号
 void IIC_Ack(void);					//IIC发送ACK信号
 void IIC_NAck(void);				//IIC不发送ACK信号
 
-void IIC_Write_One_Byte(uint8_t daddr,uint8_t addr,uint8_t data);
-uint8_t IIC_Read_One_Byte(uint8_t daddr,uint8_t addr);	  
 #endif
-
-
-
-
-
-
-
-
-
-
-
 
 
 

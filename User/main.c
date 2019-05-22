@@ -5,6 +5,7 @@
 #include "delay.h"
 #include "usart.h"
 #include "iic.h"
+#include "mpu9250.h"
 #include "ssi.h"
 #include "led.h"
 #include "timer.h"
@@ -31,60 +32,44 @@ float global_temp;
 int32_t as1_count = 0, as2_count = 0;
 int32_t as1_real, as2_real;
 int32_t position_x = 0, position_y = 0;
+double gravity;
 
 int main(void)
 {
-	uint8_t mput_fail = 0, mpub_fail = 0;
 	uint8_t send_led = 4;		//send frequncy div2 to tonggle blink led
-	float angle_x, angle_y, angle_z;
-	short angle_send_x = 0, angle_send_y = 0, angle_send_z = 0;
-	int32_t position_x_last = 0, position_y_last = 0, velocity_x = 0, velocity_y = 0;
 	
+//	float angle_x, angle_y, angle_z;
+//	short angle_send_x = 0, angle_send_y = 0, angle_send_z = 0;
+	int32_t position_x_last = 0, position_y_last = 0, velocity_x = 0, velocity_y = 0;
+//	float velocity_imu_x = 0, velocity_imu_y = 0, position_imu_x = 0, position_imu_y = 0;
+
 	RCC_ClocksTypeDef Rcc_clock;
-	imu_struct mpu_t, mpu_b, mpu_out;
+	imu_struct mpu_orig;
+	short mag_x, mag_y, mag_z;
 	
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);	//设置系统中断优先级分组2
 	
 	#define USE_HSE
 	RCC_ClockConfig();	//set sysclk to 168 MHz
 	delay_init(168);
-	uart_init(256000);
+	uart_init(115200);
 	LED_Init();
 	IIC_Init();
 	SSI_GPIO_Init();
 	TIM3_PWM_Init(500-1,84-1);		//定时器时钟 84M/84=1Mhz,重装载值500，所以PWM频率为 1M/500=2Khz.
 	RCC_GetClocksFreq(&Rcc_clock);
 	
-	mpu_t.addr = MPU_Top;
-	mpu_b.addr = MPU_Bottom;
+	mpu_orig.addr = MPU_ADDR;
 	delay_ms(400);	//wait for imu-sensor power stable
-	if( action_dmp_init(mpu_t.addr) )
-	{
-		mput_fail = 1;
-		printf("MPU6050 on TopLayer not found\n\n");
-	}
-//	if( action_dmp_init(mpu_b.addr) )
+	MPU_Init(mpu_orig.addr);
+//	if( mpu_dmp_init() )
 //	{
-//		mpub_fail = 1;
-//		printf("MPU6050 on BottomLayer not found\n\n");
+//		printf("MPU6050 INIT FAIL\n");
 //	}
 	
-	if(mput_fail || mpub_fail)	//Retry
-	{
-		MPU_Write_Byte(mpu_t.addr, MPU_PWR_MGMT1_REG, 0X80);	//复位MPU6050
-		MPU_Write_Byte(mpu_b.addr, MPU_PWR_MGMT1_REG, 0X80);
-		delay_ms(300);
-		if( action_dmp_init(mpu_t.addr) )
-		{
-			LED0 = 1;
-			printf("MPU6050 on TopLayer not found\n\n");
-		}
-//		if( action_dmp_init(mpu_b.addr) )
-//		{
-//			LED1 = 1;
-//			printf("MPU6050 on BottomLayer not found\n\n");
-//		}
-	}
+//	delay_ms(2000);
+//	IIC2_Init();
+//	MPU2_Init(0x68);
 	
 	TIM2_IT_Init(40-1,840-1);		//定时器时钟 APB1*2=84M，分频系数840，所以84M/840=100Khz的计数频率，计数40次为400us
 	while(1)
@@ -97,31 +82,38 @@ int main(void)
 			position_x_last = position_x;
 			position_y_last = position_y;
 			
-			upload_data(position_x, position_y, velocity_x, velocity_y, mpu_out.pitch, mpu_out.roll, mpu_out.yaw, mpu_out.temp*10);
+			upload_data(position_x, position_y, velocity_x, velocity_y, mpu_orig.pitch, mpu_orig.roll, mpu_orig.yaw, mpu_orig.temp*10);
 		}
 		
 		if(imu_get_flag)	//imu 10ms & 100Hz get data flag
 		{
 			imu_get_flag = 0;
 			
-			if(action_dmp_getdata(&mpu_t.pitch, &mpu_t.roll, &mpu_t.yaw, &mpu_t))
-			{
-				printf("mpu_dmp_read_faild!\n");
-			}
-//			if(action_dmp_getdata(&mpu_b.pitch, &mpu_b.roll, &mpu_b.yaw, &mpu_b))
+//			if(action_dmp_getdata(&mpu_orig.pitch, &mpu_orig.roll, &mpu_orig.yaw, &mpu_orig))
 //			{
 //				printf("mpu_dmp_read_faild!\n");
 //			}
-			mpu_out.temp = mpu_t.temp;
-			global_temp = mpu_t.temp;
-			average_fliter(&mpu_t, &mpu_out);
 			
-			get_euler_angle(mpu_out.gyrox, mpu_out.gyroy, mpu_out.gyroz, mpu_out.accx, mpu_out.accy, mpu_out.accz, \
+			mpu_orig.temp = MPU_Get_Temperature(mpu_orig.addr)-20;
+			MPU_Get_Gyroscope(mpu_orig.addr, &mpu_orig.gyrox, &mpu_orig.gyroy, &mpu_orig.gyroz);
+			MPU_Get_Accelerometer(mpu_orig.addr, &mpu_orig.accx, &mpu_orig.accy, &mpu_orig.accz);
+			MPU9250_GetMag(MAG_ADDRESS, &mag_x, &mag_y, &mag_z);
+			
+//			mpu_out.temp = mpu_b.temp;
+//			global_temp = mpu_b.temp;
+//			average_fliter(&mpu_b, &mpu_out);
+//			
+//			get_euler_angle(mpu_out.gyrox, mpu_out.gyroy, mpu_out.gyroz, mpu_out.accx, mpu_out.accy, mpu_out.accz, \
 																		&mpu_out.pitch, &mpu_out.roll, &mpu_out.yaw);
 			
+//			velocity_imu_x += (((mpu_out.accx - gravity*asin(mpu_out.roll*A2R))/32768)*2*gravity)*0.01f;
+//			velocity_imu_y += (((mpu_out.accy - gravity*asin(mpu_out.pitch*A2R))/32768)*2*gravity)*0.01f;
+//			position_imu_x += velocity_imu_x*0.01f;
+//			position_imu_y += velocity_imu_y*0.01f;
+
 //			angle_x += mpu_t.gyrox*0.01;
 //			angle_y += mpu_t.gyroy*0.01;
-			angle_z += -mpu_out.gyroz*0.01*GYRO_PRE;
+//			angle_z += -mpu_out.gyroz*0.01*GYRO_PRE;
 //			angle_send_z = angle_z + 0.5;	//四舍五入
 //			
 //			usart1_send_char(0xfc);
@@ -140,14 +132,17 @@ int main(void)
 			{
 				send_led = 4;
 				LED1 = ~LED1;
-				
-				printf("Wanl_%.1f\t%.2f\t%.2f\t%.2f\t%.2f\t| %d\t%d\t%d\t%d\t%d\t%d\t| %.2f\t%.2f\t%.2f\t| %d\t%d\t%d\t%d\n", \
-											mpu_t.temp, mpu_t.pitch, mpu_t.roll, mpu_t.yaw, angle_z, \
-												mpu_out.accx, mpu_out.accy, mpu_out.accz, \
-												mpu_out.gyrox, mpu_out.gyroy, mpu_out.gyroz, \
-												mpu_out.pitch, mpu_out.roll, mpu_out.yaw, 
-												position_x, position_y, velocity_x, velocity_y);
-				
+//				
+//				printf("Wanl_%.1f\t%.2f\t%.2f\t%.2f\t| %d\t%d\t%d\t%d\t%d\t%d\t| %d\t%d\t%d\n", \
+//											mpu_out.temp, mpu_out.pitch, mpu_out.roll, mpu_out.yaw, \
+//												mpu_out.accx, mpu_out.accy, mpu_out.accz, \
+//												mpu_out.gyrox, mpu_out.gyroy, mpu_out.gyroz, \
+//												mag_x, mag_y, mag_z);
+//				
+////				printf("%.2f\t%.2f\t| %.2f\t%.2f\t%.2f\t%.2f\n", mpu_out.roll, mpu_out.pitch, \
+////								velocity_imu_x, velocity_imu_y, position_imu_x, position_imu_y);
+//				
+//				printf("%.1f\t%d\t%d\t%d\n", mpu_b.temp, mag_x, mag_y, mag_z);
 			}
 		}
 		delay_ms(2);
@@ -157,7 +152,7 @@ int main(void)
 void ssi_data_process(void)
 {
 	static uint8_t if_first = 1;
-	static uint16_t as1_last = 2047, as2_last = 2047, as1_start, as2_start;
+	static uint16_t as1_last = 2047, as2_last = 2047, as1_offset, as2_offset;
 	uint16_t as1, as2;	//AS5045 12bit abslute angle
 	uint32_t astmp;
 	const float sample = 4095.0f;
@@ -201,14 +196,14 @@ void ssi_data_process(void)
 	if(if_first)
 	{
 		if_first = 0;
-		as1_start = as1;
-		as2_start = as2;
+		as1_offset = as1;
+		as2_offset = as2;
 	}
 	
 	as1_last = as1;
 	as2_last = as2;
-	as1_real = as1 - as1_start;
-	as2_real = as2 - as2_start;
+	as1_real = as1 - as1_offset;
+	as2_real = as2 - as2_offset;
 	
 	position_x = (as1_count + as1_real/sample) * Pi * diameter;		//position interger, unit: mm
 	position_y = -(as2_count + as2_real/sample) * Pi * diameter;
