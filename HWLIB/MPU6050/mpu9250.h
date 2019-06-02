@@ -37,8 +37,7 @@
 #define	WHO_AM_I		0x75	//IIC地址寄存器(默认数值0x68，只读)
 
 //****************************
-#define MPU6050_ADDRESS	0xd0   //MPU6050器件读地址
-#define MAG_ADDRESS     0x18   //磁场地址
+#define MAG_ADDRESS     0x0C   //磁场地址
 
-void 	MPU9250_GetMag(uint8_t addr, short *mag_x, short *mag_y, short *mag_z);
+void 	MPU9250_GetMag(short *mag_x, short *mag_y, short *mag_z);
 

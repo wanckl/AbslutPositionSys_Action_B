@@ -25,12 +25,11 @@ void usart1_ANO_report(u8 fun,u8*data,u8 len);
 void average_fliter(imu_struct *fliter_in, imu_struct *fliter_out);
 void upload_data(int32_t px, int32_t py, int32_t vx, int32_t vy, short pitch, short roll, short yaw, short temp);
 
-const static uint8_t diameter = 50;	//Ö±¾¶ mm
+const static uint8_t diameter = 50;	//ç›´å¾„ mm
 const static float Pi = 3.141592653579f;
 float global_temp;
+imu_struct mpu_out;
 
-int32_t as1_count = 0, as2_count = 0;
-int32_t as1_real, as2_real;
 int32_t position_x = 0, position_y = 0;
 double gravity;
 
@@ -47,7 +46,7 @@ int main(void)
 	imu_struct mpu_orig;
 	short mag_x, mag_y, mag_z;
 	
-	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);	//ÉèÖÃÏµÍ³ÖĞ¶ÏÓÅÏÈ¼¶·Ö×é2
+	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);	//è®¾ç½®ç³»ç»Ÿä¸­æ–­ä¼˜å…ˆçº§åˆ†ç»„2
 	
 	#define USE_HSE
 	RCC_ClockConfig();	//set sysclk to 168 MHz
@@ -56,7 +55,7 @@ int main(void)
 	LED_Init();
 	IIC_Init();
 	SSI_GPIO_Init();
-	TIM3_PWM_Init(500-1,84-1);		//¶¨Ê±Æ÷Ê±ÖÓ 84M/84=1Mhz,ÖØ×°ÔØÖµ500£¬ËùÒÔPWMÆµÂÊÎª 1M/500=2Khz.
+	TIM3_PWM_Init(500-1,84-1);		//å®šæ—¶å™¨æ—¶é’Ÿ 84M/84=1Mhz,é‡è£…è½½å€¼500ï¼Œæ‰€ä»¥PWMé¢‘ç‡ä¸º 1M/500=2Khz.
 	RCC_GetClocksFreq(&Rcc_clock);
 	
 	mpu_orig.addr = MPU_ADDR;
@@ -71,7 +70,7 @@ int main(void)
 //	IIC2_Init();
 //	MPU2_Init(0x68);
 	
-	TIM2_IT_Init(40-1,840-1);		//¶¨Ê±Æ÷Ê±ÖÓ APB1*2=84M£¬·ÖÆµÏµÊı840£¬ËùÒÔ84M/840=100KhzµÄ¼ÆÊıÆµÂÊ£¬¼ÆÊı40´ÎÎª400us
+	TIM2_IT_Init(40-1,840-1);		//å®šæ—¶å™¨æ—¶é’Ÿ APB1*2=84Mï¼Œåˆ†é¢‘ç³»æ•°840ï¼Œæ‰€ä»¥84M/840=100Khzçš„è®¡æ•°é¢‘ç‡ï¼Œè®¡æ•°40æ¬¡ä¸º400us
 	while(1)
 	{
 		if(velocity_flag)	//calculate speed use position data, unit: mm/s, update freq: 2Hz
@@ -97,7 +96,7 @@ int main(void)
 			mpu_orig.temp = MPU_Get_Temperature(mpu_orig.addr)-20;
 			MPU_Get_Gyroscope(mpu_orig.addr, &mpu_orig.gyrox, &mpu_orig.gyroy, &mpu_orig.gyroz);
 			MPU_Get_Accelerometer(mpu_orig.addr, &mpu_orig.accx, &mpu_orig.accy, &mpu_orig.accz);
-			MPU9250_GetMag(MAG_ADDRESS, &mag_x, &mag_y, &mag_z);
+			MPU9250_GetMag(&mag_x, &mag_y, &mag_z);
 			
 //			mpu_out.temp = mpu_b.temp;
 //			global_temp = mpu_b.temp;
@@ -114,7 +113,7 @@ int main(void)
 //			angle_x += mpu_t.gyrox*0.01;
 //			angle_y += mpu_t.gyroy*0.01;
 //			angle_z += -mpu_out.gyroz*0.01*GYRO_PRE;
-//			angle_send_z = angle_z + 0.5;	//ËÄÉáÎåÈë
+//			angle_send_z = angle_z + 0.5;	//å››èˆäº”å…¥
 //			
 //			usart1_send_char(0xfc);
 //			usart1_send_char(0x03);
@@ -152,61 +151,51 @@ int main(void)
 void ssi_data_process(void)
 {
 	static uint8_t if_first = 1;
-	static uint16_t as1_last = 2047, as2_last = 2047, as1_offset, as2_offset;
-	uint16_t as1, as2;	//AS5045 12bit abslute angle
+	static uint16_t as1_last, as2_last;
+	uint16_t as1_now, as2_now, as1_inc, as2_inc;	//AS5045 12bit abslute angle
 	uint32_t astmp;
-	const float sample = 4095.0f;
+	const float sample = 4096.0f;
 	
 	astmp = SSI_ReadPKG();
-	as2 = astmp;
+	as2_now = astmp;
 	astmp >>= 16;
-	as1 = astmp;
-	as1 >>= 4;
-	as2 >>= 4;
+	as1_now = astmp;
+	as1_now >>= 4;
+	as2_now >>= 4;
 
-//	printf("as1=%d\tas1_count=%d\tposition_x=%d\n", as1, as1_count, position_x);
-//	usart1_send_char(0xfc);
-//	usart1_send_char(0x03);
-//	usart1_send_char(0x03);
-//	usart1_send_char(0xfc);
-//	usart1_send_char(position_x);
-//	usart1_send_char(position_x>>8);
-//	as1 = as_data_liner(as1);
-//	usart1_send_char(position_x>>16);
-//	usart1_send_char(position_x>>24);
-
-	if(as1_last - as1 > 3000)
-	{
-		as1_count ++;
-	}
-	if(as1 - as1_last > 3000)
-	{
-		as1_count --;
-	}
-	
-	if(as2_last - as2 > 3000)
-	{
-		as2_count ++;
-	}
-	if(as2 - as2_last > 3000)
-	{
-		as2_count --;
-	}
-	
 	if(if_first)
 	{
 		if_first = 0;
-		as1_offset = as1;
-		as2_offset = as2;
+		as1_last = as1_now;
+		as2_last = as2_now;
+	}
+
+	if(as1_last - as1_now > 3000)	//æ£€æµ‹æ˜¯å¦è¶Šè¿‡é›¶ç‚¹è·³å˜
+	{
+		as1_inc = sample - as1_last + as1_now;
+	}
+	if(as1_now - as1_last > 3000)
+	{
+		as1_inc = -(sample - as1_now + as1_last);
 	}
 	
-	as1_last = as1;
-	as2_last = as2;
-	as1_real = as1 - as1_offset;
-	as2_real = as2 - as2_offset;
+	if(as2_last - as2_now > 3000)
+	{
+		as2_inc = sample - as2_last + as2_now;
+	}
+	if(as2_now - as2_last > 3000)
+	{
+		as2_inc = -(sample - as2_now + as2_last);
+	}
+
+	as1_inc = as1_now - as1_last;		//æ±‚å‡ºå¢é‡å€¼
+	as2_inc = as2_now - as2_last;
 	
-	position_x = (as1_count + as1_real/sample) * Pi * diameter;		//position interger, unit: mm
-	position_y = -(as2_count + as2_real/sample) * Pi * diameter;
+	as1_last = as1_now;		//åˆ·æ–°ä¸Šä¸€æ¬¡è®°å½•
+	as2_last = as2_now;
+	
+	position_x += ((as1_inc*cos(mpu_out.yaw)-as2_inc*sin(mpu_out.yaw))*diameter)/sample;		//æŠ•å½±å¹¶ç§¯åˆ†å¢é‡å€¼, å•ä½: mm
+	position_y += ((as1_inc*sin(mpu_out.yaw)+as2_inc*cos(mpu_out.yaw))*diameter)/sample;
 }
 
 int8_t Kln = 120;
@@ -244,27 +233,27 @@ uint8_t mpu_temp_pid(uint8_t hope)
 	return res;
 }
 
-//´«ËÍÊı¾İ¸øÄäÃûËÄÖáÉÏÎ»»úÈí¼ş(V2.6°æ±¾)
-//fun:¹¦ÄÜ×Ö. 0XA0~0XAF
-//data:Êı¾İ»º´æÇø,×î¶à28×Ö½Ú!!
-//len:dataÇøÓĞĞ§Êı¾İ¸öÊı
+//ä¼ é€æ•°æ®ç»™åŒ¿åå››è½´ä¸Šä½æœºè½¯ä»¶(V2.6ç‰ˆæœ¬)
+//fun:åŠŸèƒ½å­—. 0XA0~0XAF
+//data:æ•°æ®ç¼“å­˜åŒº,æœ€å¤š28å­—èŠ‚!!
+//len:dataåŒºæœ‰æ•ˆæ•°æ®ä¸ªæ•°
 void usart1_ANO_report(u8 fun,u8*data,u8 len)
 {
 	u8 send_buf[32];
 	u8 i;
-	if(len>28)return;	//×î¶à28×Ö½ÚÊı¾İ 
-	send_buf[len+3]=0;	//Ğ£ÑéÊıÖÃÁã
-	send_buf[0]=0X88;	//Ö¡Í·
-	send_buf[1]=fun;	//¹¦ÄÜ×Ö
-	send_buf[2]=len;	//Êı¾İ³¤¶È
-	for(i=0;i<len;i++)send_buf[3+i]=data[i];			//¸´ÖÆÊı¾İ
-	for(i=0;i<len+3;i++)send_buf[len+3]+=send_buf[i];	//¼ÆËãĞ£ÑéºÍ	
-	for(i=0;i<len+4;i++)usart1_send_char(send_buf[i]);	//·¢ËÍÊı¾İµ½´®¿Ú1 
+	if(len>28)return;	//æœ€å¤š28å­—èŠ‚æ•°æ®
+	send_buf[len+3]=0;	//æ ¡éªŒæ•°ç½®é›¶
+	send_buf[0]=0X88;	//å¸§å¤´
+	send_buf[1]=fun;	//åŠŸèƒ½å­—
+	send_buf[2]=len;	//æ•°æ®é•¿åº¦
+	for(i=0;i<len;i++)send_buf[3+i]=data[i];			//å¤åˆ¶æ•°æ®
+	for(i=0;i<len+3;i++)send_buf[len+3]+=send_buf[i];	//è®¡ç®—æ ¡éªŒå’Œ
+	for(i=0;i<len+4;i++)usart1_send_char(send_buf[i]);	//å‘é€æ•°æ®åˆ°ä¸²å£1
 }
 
 void RCC_ClockConfig(void)	//re-config sysclk to 168 by need
 {
-	RCC_DeInit();	//½«ÍâÉè RCC¼Ä´æÆ÷ÖØÉèÎªÈ±Ê¡Öµ
+	RCC_DeInit();	//å°†å¤–è®¾ RCCå¯„å­˜å™¨é‡è®¾ä¸ºç¼ºçœå€¼
 	
 #if defined USE_HSE
 	RCC_HSEConfig( RCC_HSE_ON );
@@ -290,8 +279,8 @@ void RCC_ClockConfig(void)	//re-config sysclk to 168 by need
 	}
 
 #elif defined USE_HSI
-    RCC_HSICmd(ENABLE);	//Ê¹ÄÜHSI  
-    while(RCC_GetFlagStatus(RCC_FLAG_HSIRDY) == RESET);//µÈ´ıHSIÊ¹ÄÜ³É¹¦
+    RCC_HSICmd(ENABLE);	//ä½¿èƒ½HSI
+    while(RCC_GetFlagStatus(RCC_FLAG_HSIRDY) == RESET);//ç­‰å¾…HSIä½¿èƒ½æˆåŠŸ
  
     //FLASH_PrefetchBufferCmd(FLASH_PrefetchBuffer_Enable);
     //FLASH_SetLatency(FLASH_Latency_2);
@@ -302,15 +291,15 @@ void RCC_ClockConfig(void)	//re-config sysclk to 168 by need
     RCC_PLLConfig(RCC_PLLSource_HSI, 8, 168, 2, 7);		//SYSClock = 16/8*168/2 = 168M
     RCC_PLLCmd(ENABLE);
     
-    while(RCC_GetFlagStatus(RCC_FLAG_PLLRDY) == RESET);	//µÈ´ıÖ¸¶¨µÄ RCC ±êÖ¾Î»ÉèÖÃ³É¹¦ µÈ´ıPLL³õÊ¼»¯³É¹¦
+    while(RCC_GetFlagStatus(RCC_FLAG_PLLRDY) == RESET);	//ç­‰å¾…æŒ‡å®šçš„ RCC æ ‡å¿—ä½è®¾ç½®æˆåŠŸ ç­‰å¾…PLLåˆå§‹åŒ–æˆåŠŸ
  
-    RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);//Ñ¡ÔñÏëÒªµÄÏµÍ³Ê±ÖÓ
+    RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);//é€‰æ‹©æƒ³è¦çš„ç³»ç»Ÿæ—¶é’Ÿ
 	
-    //µÈ´ıPLL³É¹¦ÓÃ×÷ÓÚÏµÍ³Ê±ÖÓµÄÊ±ÖÓÔ´
-    //  0x00£ºHSI ×÷ÎªÏµÍ³Ê±ÖÓ 
-    //  0x04£ºHSE×÷ÎªÏµÍ³Ê±ÖÓ 
-    //  0x08£ºPLL×÷ÎªÏµÍ³Ê±ÖÓ  
-    while(RCC_GetSYSCLKSource() != 0x08);//ĞèÓë±»Ñ¡ÔñµÄÏµÍ³Ê±ÖÓ¶ÔÓ¦ÆğÀ´£¬RCC_SYSCLKSource_PLL
+    //ç­‰å¾…PLLæˆåŠŸç”¨ä½œäºç³»ç»Ÿæ—¶é’Ÿçš„æ—¶é’Ÿæº
+    //  0x00ï¼šHSI ä½œä¸ºç³»ç»Ÿæ—¶é’Ÿ
+    //  0x04ï¼šHSEä½œä¸ºç³»ç»Ÿæ—¶é’Ÿ
+    //  0x08ï¼šPLLä½œä¸ºç³»ç»Ÿæ—¶é’Ÿ
+    while(RCC_GetSYSCLKSource() != 0x08);//éœ€ä¸è¢«é€‰æ‹©çš„ç³»ç»Ÿæ—¶é’Ÿå¯¹åº”èµ·æ¥ï¼ŒRCC_SYSCLKSource_PLL
 	
 #endif
 }

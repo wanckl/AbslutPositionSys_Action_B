@@ -489,11 +489,6 @@
               <FileType>1</FileType>
               <FilePath>..\..\Chip\timer\timer.c</FilePath>
             </File>
-            <File>
-              <FileName>iic2.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\Chip\iic\iic2.c</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>

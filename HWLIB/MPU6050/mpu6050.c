@@ -9,7 +9,7 @@
 //    其他,错误代码
 uint8_t MPU_Init(uint8_t addr)
 { 
-	uint8_t ID = 0;
+	uint8_t ID = 0xff;
 	
 	MPU_Write_Byte(addr, MPU_PWR_MGMT1_REG, 0X80);	//复位MPU6050
 	delay_ms(100);
@@ -24,7 +24,7 @@ uint8_t MPU_Init(uint8_t addr)
 		MPU_Write_Byte(addr, MPU_CFG_REG,0X06);		//低通滤波器的设置，截止频率是1K，带宽是5K
 //		MPU_Write_Byte(addr, MPU_INT_EN_REG,0X00);	//关闭所有中断
 //		MPU_Write_Byte(addr, MPU_USER_CTRL_REG,0X00);	//I2C主模式关闭
-//		MPU_Write_Byte(addr, MPU_FIFO_EN_REG,0X00);	//关闭FIFO
+//		MPU_Write_Byte(addr, MPU_FIFO_EN_REG,0X00);		//关闭FIFO
 //		MPU_Write_Byte(addr, MPU_INTBP_CFG_REG,0X80);	//INT引脚低电平有效
 //		MPU_Write_Byte(addr, MPU_PWR_MGMT1_REG,0X01);	//设置CLKSEL,PLL X轴为参考
 //		MPU_Write_Byte(addr, MPU_PWR_MGMT2_REG,0X00);	//加速度与陀螺仪都工作
@@ -217,16 +217,16 @@ uint8_t MPU_Read_Byte(uint8_t addr, uint8_t reg)
 {
 	uint8_t res;
     IIC_Start(); 
-	IIC_Send_Byte((addr << 1)|0);//发送器件地址+写命令	
+	IIC_Send_Byte((addr << 1)|0);//发送器件地址+写命令
 	IIC_Wait_Ack();		//等待应答 
     IIC_Send_Byte(reg);	//写寄存器地址
     IIC_Wait_Ack();		//等待应答
     IIC_Start();
-	IIC_Send_Byte((addr << 1)|1);//发送器件地址+读命令	
+	IIC_Send_Byte((addr << 1)|1);//发送器件地址+读命令
     IIC_Wait_Ack();		//等待应答 
 	res=IIC_Read_Byte(0);//读取数据,发送nACK 
-    IIC_Stop();			//产生一个停止条件 
-	return res;		
+    IIC_Stop();			//产生一个停止条件
+	return res;	
 }
 
 uint8_t action_dmp_getdata(float *pitch,float *roll,float *yaw, imu_struct *mpustru)

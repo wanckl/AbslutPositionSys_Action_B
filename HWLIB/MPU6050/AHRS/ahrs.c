@@ -80,7 +80,7 @@ void get_euler_angle(float gx, float gy, float gz, float ax, float ay, float az,
 	gy += Kp*ey + eyInt;
 	gz += Kp*ez + ezInt;			//这里的gz由于没有观测者进行矫正会产生漂移，表现出来的就是积分自增或自减
 
-	// integrate quaternion rate and normalise			//四元数的微分方程
+	// integrate quaternion rate and normalise	---四元数的微分方程
 	q0 += (-q1*gx - q2*gy - q3*gz)*halfT;
 	q1 += (q0*gx + q2*gz - q3*gy)*halfT;
 	q2 += (q0*gy - q1*gz + q3*gx)*halfT;
